@@ -51,6 +51,7 @@ var host = Host.CreateDefaultBuilder(args)
 		services.AddSingleton<ISqsMessageQueue, SqsMessageQueue>();
 
 		services.AddHostedService<QueueReadingService>();
+		services.AddHostedService<ScoreProcessingService>();
 	})
 	.Build();
 

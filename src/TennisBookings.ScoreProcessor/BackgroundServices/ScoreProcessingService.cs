@@ -1,3 +1,5 @@
+using TennisBookings.ScoreProcessor.Processing;
+
 namespace TennisBookings.ScoreProcessor.BackgroundServices;
 internal class ScoreProcessingService : BackgroundService
 {
@@ -18,20 +20,19 @@ internal class ScoreProcessingService : BackgroundService
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		_logger.LogInformation("Score Processing Service is starting.");
-		while (!stoppingToken.IsCancellationRequested)
+		await foreach (var message in _sqsMessageChannel.Reader.ReadAllAsync()
+			.WithCancellation(stoppingToken))
 		{
-			using (var scope = _serviceScopeFactory.CreateScope())
-			{
-				// Here you would typically resolve your services and process scores.
-				// For example:
-				// var scoreProcessor = scope.ServiceProvider.GetRequiredService<IScoreProcessor>();
-				// await scoreProcessor.ProcessScoresAsync(stoppingToken);
-			}
-			await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+			_logger.LogInformation("Read message {MessageId} from channel.", message.MessageId);
+
+			using var scope = _serviceProvider.CreateScope();
+			var scoreProcessor = scope.ServiceProvider.GetRequiredService<IScoreProcessor>();
+
+			await scoreProcessor.ProcessScoresFromMessageAsync(message, stoppingToken);
+
+			_logger.LogInformation("Finished processing message {MessageId} from channel.", message.MessageId);
 		}
-		_logger.LogInformation("Score Processing Service is stopping.");
+
+		_logger.LogInformation("Score processing service has finished processing all available messages from the channel.");
 	}
-}
-{
 }
