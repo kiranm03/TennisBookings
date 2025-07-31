@@ -1,4 +1,5 @@
 using System.Net;
+using TennisBookings.ScoreProcessor.Logging;
 
 namespace TennisBookings.ScoreProcessor.BackgroundServices;
 
@@ -44,33 +45,48 @@ public class QueueReadingService : BackgroundService
 			WaitTimeSeconds = 5
 		};
 
-		while (!stoppingToken.IsCancellationRequested)
+		try
 		{
-			ReceivesAttempted++;
-
-			var receiveMessageResponse =
-				await _sqsMessageQueue.ReceiveMessageAsync(receiveMessageRequest, stoppingToken);
-
-			if (receiveMessageResponse.HttpStatusCode == HttpStatusCode.OK &&
-				receiveMessageResponse.Messages.Any())
+			while (!stoppingToken.IsCancellationRequested)
 			{
-				MessagesReceived += receiveMessageResponse.Messages.Count;
+				ReceivesAttempted++;
 
-				_logger.LogInformation("Received {MessageCount} messages from queue.", receiveMessageResponse.Messages.Count);
+				var receiveMessageResponse =
+					await _sqsMessageQueue.ReceiveMessageAsync(receiveMessageRequest, stoppingToken);
 
-				await _sqsMessageChannel
-					.WriteMessagesAsync(receiveMessageResponse.Messages, stoppingToken);
-			}
-			else if(receiveMessageResponse.HttpStatusCode == HttpStatusCode.OK)
-			{
-				_logger.LogInformation("No messages received. Attempting receive again in 10 seconds.");
+				if (receiveMessageResponse.HttpStatusCode == HttpStatusCode.OK &&
+					receiveMessageResponse.Messages.Any())
+				{
+					MessagesReceived += receiveMessageResponse.Messages.Count;
 
-				await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+					_logger.LogInformation("Received {MessageCount} messages from queue.", receiveMessageResponse.Messages.Count);
+
+					await _sqsMessageChannel
+						.WriteMessagesAsync(receiveMessageResponse.Messages, stoppingToken);
+				}
+				else if (receiveMessageResponse.HttpStatusCode == HttpStatusCode.OK)
+				{
+					_logger.LogInformation("No messages received. Attempting receive again in 10 seconds.");
+
+					await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+				}
+				else if (receiveMessageResponse.HttpStatusCode != HttpStatusCode.OK)
+				{
+					_logger.LogError("Failed to receive messages from queue. HTTP Status Code: {StatusCode}", receiveMessageResponse.HttpStatusCode);
+				}
 			}
-			else if (receiveMessageResponse.HttpStatusCode != HttpStatusCode.OK)
-			{
-				_logger.LogError("Failed to receive messages from queue. HTTP Status Code: {StatusCode}", receiveMessageResponse.HttpStatusCode);
-			}
+		}
+		catch (OperationCanceledException)
+		{
+			_logger.OperationCancelledExceptionOccurred();
+		}
+		catch (Exception ex)
+		{
+			_logger.LogCritical(ex, "A critical exception was thrown");
+		}
+		finally
+		{
+			_sqsMessageChannel.TryCompleteWriter();
 		}
 
 		_sqsMessageChannel.TryCompleteWriter();
