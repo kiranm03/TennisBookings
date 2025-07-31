@@ -17,6 +17,7 @@ var host = Host.CreateDefaultBuilder(args)
 		services.Configure<HostOptions>(hostOptions =>
 		{
 			hostOptions.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+			hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(60);
 		});
 
 		services.Configure<AwsServicesConfiguration>(hostContext.Configuration.GetSection("AWS"));

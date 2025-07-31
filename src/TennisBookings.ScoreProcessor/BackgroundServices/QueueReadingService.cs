@@ -93,7 +93,5 @@ public class QueueReadingService : BackgroundService
 		{
 			_sqsMessageChannel.TryCompleteWriter();
 		}
-
-		_sqsMessageChannel.TryCompleteWriter();
 	}
 }
