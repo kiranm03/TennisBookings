@@ -8,6 +8,7 @@ global using TennisBookings.ResultsProcessing;
 global using TennisBookings.ScoreProcessor;
 global using TennisBookings.ScoreProcessor.Sqs;
 global using TennisBookings.ScoreProcessor.S3;
+using TennisBookings.ScoreProcessor.BackgroundServices;
 
 var host = Host.CreateDefaultBuilder(args)
 	.ConfigureServices((hostContext, services) =>
@@ -48,6 +49,8 @@ var host = Host.CreateDefaultBuilder(args)
 		services.AddSingleton<ISqsMessageChannel, SqsMessageChannel>();
 		services.AddSingleton<ISqsMessageDeleter, SqsMessageDeleter>();
 		services.AddSingleton<ISqsMessageQueue, SqsMessageQueue>();
+
+		services.AddHostedService<QueueReadingService>();
 	})
 	.Build();
 
