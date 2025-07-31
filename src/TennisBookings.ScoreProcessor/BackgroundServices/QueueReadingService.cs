@@ -38,6 +38,11 @@ public class QueueReadingService : BackgroundService
 	{
 		_logger.LogInformation("Started queue reading service.");
 
+		stoppingToken.Register(() =>
+		{
+			_logger.LogInformation("Ending queue reading service due to host shutdown.");
+		});
+
 		var receiveMessageRequest = new ReceiveMessageRequest
 		{
 			QueueUrl = _queueUrl,
