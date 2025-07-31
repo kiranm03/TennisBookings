@@ -1,22 +1,36 @@
+global using System.Text.Json;
 global using Amazon.S3;
 global using Amazon.S3.Model;
 global using Amazon.SQS;
 global using Amazon.SQS.Model;
 global using Microsoft.Extensions.Options;
-global using System.Text.Json;
 global using TennisBookings.ResultsProcessing;
 global using TennisBookings.ScoreProcessor;
-global using TennisBookings.ScoreProcessor.Sqs;
 global using TennisBookings.ScoreProcessor.S3;
+global using TennisBookings.ScoreProcessor.Sqs;
+using Amazon.Runtime.CredentialManagement;
 using TennisBookings.ScoreProcessor.BackgroundServices;
 
 var host = Host.CreateDefaultBuilder(args)
 	.ConfigureServices((hostContext, services) =>
 	{
+		services.Configure<HostOptions>(hostOptions =>
+		{
+			hostOptions.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+		});
+
 		services.Configure<AwsServicesConfiguration>(hostContext.Configuration.GetSection("AWS"));
 
-		services.AddAWSService<IAmazonSQS>();
+		//var chain = new CredentialProfileStoreChain();
+
+		//if (!chain.TryGetAWSCredentials("default", out var credentials))
+		//	throw new Exception("❌ Could not load AWS credentials from profile");
+
+		//services.AddSingleton<IAmazonSQS>(
+		//	new AmazonSQSClient(credentials, Amazon.RegionEndpoint.APSoutheast2));
+
 		services.AddAWSService<IAmazonS3>();
+		services.AddAWSService<IAmazonSQS>();
 
 		var useLocalStack = hostContext.Configuration.GetValue<bool>("AWS:UseLocalStack");
 
